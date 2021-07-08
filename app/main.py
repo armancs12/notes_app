@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 from app.models import db
 from app.auth import auth
-from app.routes import auth_router
+from app.routes import auth_router, notes_router
 
 app = Flask(__name__)
 
@@ -28,6 +28,7 @@ auth.init_app(app)
 
 # Routes
 app.register_blueprint(auth_router, url_prefix="/api/v1/auth")
+app.register_blueprint(notes_router, url_prefix="/api/v1/notes")
 
 if __name__ == '__main__':
     load_dotenv()

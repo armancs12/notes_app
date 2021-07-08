@@ -32,5 +32,5 @@ class Note(db.Model):
     user = db.relationship('User', back_populates='notes')
     text = db.Column(db.Text(), nullable=False)
     created_at = db.Column(db.DateTime(), nullable=False, default=datetime.now)
-    updated_at = db.Column(db.DateTime(), nullable=False,
+    updated_at = db.Column(db.DateTime(), nullable=False, default=datetime.now,
                            onupdate=datetime.now)

@@ -1,13 +1,17 @@
-from flask import Blueprint
+from typing import List
+from flask import Blueprint, request
 from flask_pydantic import validate
 from flask_jwt_extended import create_access_token, create_refresh_token
 from flask_jwt_extended import jwt_required, current_user
 
-from app.models import User, db
+from app.models import Note, User, db
 from app.schemas import (
     ErrorResponse,
     LoginRequest,
     LoginResponse,
+    NoteRequest,
+    NoteResponse,
+    NotesResponse,
     ProfileResponse,
     RefreshTokenResponse,
     RegisterRequest
@@ -66,3 +70,93 @@ def auth_profile():
         last_name=current_user.last_name,
         email=current_user.email,
     )
+
+
+notes_router = Blueprint("notes_router", "notes_router")
+
+
+@notes_router.get("")
+@validate()
+def notes_get():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+
+    notes = Note.query.paginate(page, per_page)
+    notes_response = [NoteResponse(
+        id=note.id,
+        user_id=note.user_id,
+        text=note.text,
+        created_at=note.created_at,
+        updated_at=note.updated_at
+    ) for note in notes.items]
+
+    return NotesResponse(notes=notes_response)
+
+
+@notes_router.get("<int:id>")
+@validate()
+def notes_get_single(id: int):
+    note = Note.query.filter_by(id=id).one_or_none()
+    if note:
+        return NoteResponse(
+            id=note.id,
+            user_id=note.user_id,
+            text=note.text,
+            created_at=note.created_at,
+            updated_at=note.updated_at
+        )
+
+    return ErrorResponse(detail="Note not found!"), 404
+
+
+@notes_router.post("")
+@jwt_required()
+@validate()
+def notes_create(body: NoteRequest):
+    note = Note(text=body.text, user_id=current_user.id)
+    db.session.add(note)
+    db.session.commit()
+
+    return NoteResponse(
+        id=note.id,
+        user_id=note.user_id,
+        text=note.text,
+        created_at=note.created_at,
+        updated_at=note.updated_at
+    )
+
+
+@notes_router.put("<int:id>")
+@jwt_required()
+@validate()
+def notes_update(id: int, body: NoteRequest):
+    note = Note.query.filter_by(id=id).one_or_none()
+    if note:
+        if note.user_id == current_user.id:
+            note.text = body.text
+            db.session.commit()
+            return NoteResponse(
+                id=note.id,
+                user_id=note.user_id,
+                text=note.text,
+                created_at=note.created_at,
+                updated_at=note.updated_at
+            )
+        return ErrorResponse(detail="The note doesn't belong to the user!"), 403
+
+    return ErrorResponse(detail="Note not found!"), 404
+
+
+@notes_router.delete("<int:id>")
+@jwt_required()
+@validate()
+def notes_delete(id: int):
+    note = Note.query.filter_by(id=id).one_or_none()
+    if note:
+        if note.user_id == current_user.id:
+            db.session.delete(note)
+            db.session.commit()
+            return {}
+        return ErrorResponse(detail="The note doesn't belong to the user!"), 403
+
+    return ErrorResponse(detail="Note not found!"), 404

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 from pydantic import BaseModel, EmailStr, validator
 
@@ -55,8 +56,8 @@ class NoteResponse(BaseModel):
     id: str
     user_id: str
     text: str
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
 
 class NotesResponse(BaseModel):
